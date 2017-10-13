@@ -1,7 +1,18 @@
-function setOrbits(){
+function setPlanetaryOrbits(){
     for (var i = 0; i < planets.length; i++){
         var planet = planets[i];
-        planet['orbit'] = getOrbit(planet['distance']);
+        planet['orbit'] = getOrbit(planet['distance'], CENTER);
+    }
+}
+
+function setLunarOrbits(){
+    for (var i = 0; i < moons.length; i++){
+        var moon = moons[i];
+        var planet = moon['parent'];
+        var position = planet['position'];
+        var advancedPoint = (planet['orbitIndex'] + 1) % planet['orbit'].length;
+        var advancedPosition = planet['orbit'][advancedPoint];
+        moon['orbit'] = getOrbit(moon['distance'], advancedPosition);
     }
 }
 
@@ -14,10 +25,8 @@ function setOnclickListener(canvas){
             toggleFlightPath(canvas);
         }
 
-    }
-    );
+    }, false);
 }
-
 
 function setCanvas(){
     var canvas = document.createElement("CANVAS");
@@ -71,58 +80,52 @@ function toggleFlightPath(canvas){
 }
 
 function randomizePositions(){
-    for (var i = 0; i < planets.length; i++){
-        var planet = planets[i];
-        var randomIndex = Math.floor(Math.random() * planet['orbit'].length);
-        planet['orbitIndex'] = randomIndex;
+    for (var i = 0; i < celestialObjects.length; i++){
+        var celestialObject = celestialObjects[i];
+        var randomIndex = Math.floor(Math.random() * celestialObject['orbit'].length);
+        celestialObject['orbitIndex'] = randomIndex;
     }
 }
 
-function updatePosition(planet){
-    if (planet['orbitIndex'] < planet['orbit'].length-1){
-        planet['orbitIndex']++;
+function updatePosition(celestialObject){
+    if (celestialObject['orbitIndex'] < celestialObject['orbit'].length-1){
+        celestialObject['orbitIndex']++;
     } else {
-        planet['orbitIndex'] = 0;
+        celestialObject['orbitIndex'] = 0;
     }
-    planet['position'] = planet['orbit'][planet['orbitIndex']];
+
+    celestialObject['position'] = celestialObject['orbit'][celestialObject['orbitIndex']];
 }
 
-function updatePlanetPositions(){
-    for (var i = 0; i < planets.length; i++){
-        var planet = planets[i];
-        updatePosition(planet);
+function updateCelestialObjectPositions(){
+    for (var i = 0; i < celestialObjects.length; i++){
+        var celestialObject = celestialObjects[i];
+        updatePosition(celestialObject);
     }
 }
 
 function drawPlanets(){
-    updatePlanetPositions();
+    updateCelestialObjectPositions();
+    setLunarOrbits();
     var c = document.getElementById("canvas");
     var context = c.getContext("2d");
-    for (var i = 0; i < planets.length; i++){
-        var planet = planets[i];
+    for (var i = 0; i < celestialObjects.length; i++){
+        var celestialObject = celestialObjects[i];
         context.beginPath();
-        context.fillStyle = planet['color'];
-        context.arc(planet['position'][0], planet['position'][1], planet['radius'], 0, 2 * Math.PI);
+        context.fillStyle = celestialObject['color'];
+        context.arc(celestialObject['position'][0], celestialObject['position'][1], celestialObject['radius'], 0, 2 * Math.PI);
         context.fill();
         context.stroke();
     }
+
 }
 
-function execute(){
-    var timer = setInterval(animate, 75);
-    setOrbits();
-    randomizePositions();
-    setCanvas();
-    drawBackground();
-    animate();
-}
-
-function getOrbit(distance){
+function getOrbit(distance, barycenter){
     var sides = Math.round(distance[0] / 1.5,0);
     var orbit = [];
     for (var i = 0; i < sides; i++){
-        x = (distance[0] * Math.cos(i * 2 * Math.PI / sides)) + CENTER[0];
-        y = (distance[1] * Math.sin(i * 2 * Math.PI / sides)) + CENTER[1];
+        x = (distance[0] * Math.cos(i * 2 * Math.PI / sides)) + barycenter[0];
+        y = (distance[1] * Math.sin(i * 2 * Math.PI / sides)) + barycenter[1];
         orbit.push([x, y]);
     }
     return orbit;
@@ -131,4 +134,13 @@ function getOrbit(distance){
 function animate(){
     drawBackground();
     drawPlanets();
+}
+
+function execute(){
+    var timer = setInterval(animate, 75);
+    setPlanetaryOrbits();
+    setLunarOrbits();
+    randomizePositions();
+    setLunarOrbits();
+    setCanvas();
 }
